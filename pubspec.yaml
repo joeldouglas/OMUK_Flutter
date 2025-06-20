@@ -44,6 +44,9 @@ dependencies:
   path_provider: ^2.1.2
 
   audioplayers: ^6.5.0
+
+  desktop_drop: ^0.6.0 # For drag and drop functionality on desktop platforms
+
   # permission_handler: ^12.0.0+1 # Permission handler for Android 13 and above
 
 

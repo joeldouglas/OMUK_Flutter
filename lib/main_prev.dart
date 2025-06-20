@@ -4,7 +4,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'dart:async';
-import 'package:desktop_drop/desktop_drop.dart';
 
 
 void main() {
@@ -54,114 +53,33 @@ class MyApp extends StatelessWidget {
 
 class _PG_DirectorySettingState extends State<PG_DirectorySetting >
 {
-    final TextEditingController _directoryController = TextEditingController();
-    bool _dragging = false;
-
-    @override
-    Widget build(BuildContext context) 
-    {
-        return Scaffold
-        (
-            /*
-            appBar: AppBar
-            (
-            // title: const Text('WAV File Player'),
-            ),
-            */
-        body: Center(
-        child: Padding(
-            padding: const EdgeInsets.all(100.0),
-            child: DropTarget
-            (
-                onDragDone: (details) async 
-                {
-                    if (details.files.isNotEmpty) 
-                    {
-                        final droppedItem = details.files.first;
-                        final folder = Directory(droppedItem.path);
-
-                        if (await folder.exists() &&
-                        (await folder.stat()).type == FileSystemEntityType.directory) 
-                        {
-                            setState(() 
-                            {
-                                _directoryController.text = folder.path;
-                            });
-
-                            // Navigate after a frame to avoid setState-related context issues
-                            WidgetsBinding.instance.addPostFrameCallback((_) 
-                            {
-                                Navigator.push
-                                (
-                                    context,
-                                    MaterialPageRoute
-                                    (
-                                        builder: (context) => PG_WavList(directoryPath: folder.path),
-                                    ),
-                                );
-                            });
-                          }
-                      }
-                  },
-
-                  onDragEntered: (_) => setState(() => _dragging = true),
-                  onDragExited: (_) => setState(() => _dragging = false),
-                  
-                  child: Container(
-                      padding: const EdgeInsets.all(100.0),
-                      
-                      child: TextField
-                      (
-                          controller: _directoryController,
-                          style: const TextStyle(fontSize: 24),
-
-                          decoration: InputDecoration
-                          (
-                              labelText: 'Enter Directory Path',
-
-                              border: const OutlineInputBorder(),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 25, vertical: 25),
-
-                              suffixIcon: IconButton
-                              (
-                                  icon: const Icon(Icons.search),
-                                  onPressed: () 
-                                  {
-                                      final path = _directoryController.text;
-                                      Navigator.push
-                                      (
-                                          context,
-                                          MaterialPageRoute(builder: (context) => PG_WavList(directoryPath: path)),
-                                      );
-                                  },
-                              ),
-                          ),
-                          
-                          onSubmitted: (value) 
-                          {
-                              final path = _directoryController.text;
-                              Navigator.push
-                              (
-                                  context,
-                                  MaterialPageRoute(builder: (context) => PG_WavList(directoryPath: path)),
-                              );
-                          },
-                      ),
-                  ),
-          )
+  final TextEditingController _directoryController = TextEditingController();
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        //title: const Text('WAV File Player'),
       ),
-    ),
-  );
+      body: Center
+      (
+
+
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => PG_WavList()),
+            );
+          },
+          child: const Text('Set Directory'),
+        ),
+      ),
+    );
   }
 }
 
-class PG_WavList extends StatefulWidget 
-{
-    final String directoryPath;
-
-    PG_WavList({Key? key, required this.directoryPath}) : super(key: key);
-
-    // This widget is the root of your application.
+class PG_WavList extends StatefulWidget {
   @override
     _PG_WavListState createState() => _PG_WavListState();
 }
@@ -169,7 +87,7 @@ class PG_WavList extends StatefulWidget
 class _PG_WavListState extends State<PG_WavList> 
 {
   //final TextEditingController _directoryController = TextEditingController();
-  final AudioPlayer _player = AudioPlayer();  
+  final AudioPlayer _player = AudioPlayer();
 
   List<FileSystemEntity> _wavFiles = [];
   String? _error;
@@ -190,8 +108,7 @@ class _PG_WavListState extends State<PG_WavList>
   void initState() 
   {
       super.initState();
-      _loadWavFiles(widget.directoryPath);
-
+      
       // Listen to audio duration changes
     _player.onDurationChanged.listen((d) 
     {
@@ -327,7 +244,7 @@ Future<void> _seekToSeconds(double seconds) async
   void dispose() 
   {
       _player.dispose();
-      //_directoryController.dispose();
+      _directoryController.dispose();
       super.dispose();
   }
 
@@ -371,8 +288,8 @@ Future<void> _playAllFromIndex(int startIndex) async
           (
               title: Text('$_folderName'),
               //backgroundColor: Colors.blueGrey,
-              actions: 
-              [
+              //actions: _directoryController.text.isNotEmpty
+              //? [
                   TextButton
                   (
                       onPressed: () => _playAllFromIndex(0),
@@ -385,7 +302,7 @@ Future<void> _playAllFromIndex(int startIndex) async
                         onPressed: () => _playAllFromIndex(_currentFileIndex! + 1),
                         child: const Text('Play All (from Current)', style: TextStyle(color: Colors.blueGrey, fontSize: 16) ),
                     ),
-              ],
+              //] : null,
           ),          
           body: Padding
           (
@@ -394,9 +311,33 @@ Future<void> _playAllFromIndex(int startIndex) async
               (
                   children: 
                   [
-                      
+                      TextField
+                      (
+                          controller: _directoryController,
+                          decoration: InputDecoration
+                          (
+                              labelText: 'Enter Directory Path',
+                              border: OutlineInputBorder(),
+                              suffixIcon: IconButton
+                              (
+                                  icon: const Icon(Icons.search),
+                                  onPressed: () async 
+                                  {
+                                      final path = _directoryController.text;
+                                      await _loadWavFiles(path);
+                                  },
+                              ),
+                          ),
 
-                      //SizedBox(height: 10),
+                          onSubmitted: (value) async 
+                          {
+                              final path = _directoryController.text;
+                              await _loadWavFiles(path);
+                          },
+
+                      ),
+
+                      SizedBox(height: 10),
 
                       if (_error != null) 
                       Text(_error!, style: TextStyle(color: Colors.red)),
