@@ -43,9 +43,17 @@ dependencies:
   # path_provider is used to find commonly used locations on the filesystem
   path_provider: ^2.1.2
 
+  file_picker: ^10.2.0
+  # file_picker is used to scan for files within a directory
+
+  excel: ^4.0.6
+
+
   audioplayers: ^6.5.0
 
   desktop_drop: ^0.6.0 # For drag and drop functionality on desktop platforms
+
+
 
   # permission_handler: ^12.0.0+1 # Permission handler for Android 13 and above
 

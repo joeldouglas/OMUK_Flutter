@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 //import 'package:just_audio/just_audio.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'dart:async';
 import 'package:desktop_drop/desktop_drop.dart';
-
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart';
 
 void main() {
   runApp(const MyApp());
@@ -40,10 +42,436 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
 
       ),
-      home: PG_DirectorySetting(),
+      //home: PG_DirectorySetting(),
+      home: PG_ScriptSetting(),
     );
   }
 }
+
+
+
+class PG_ScriptSetting extends StatelessWidget
+{
+    /*@override
+    _PG_ScriptSettingState createState() => _PG_ScriptSettingState();*/
+
+    const PG_ScriptSetting({super.key});
+
+    void _handleImport(BuildContext context) async {
+    // 1. Pick Directory
+    String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+    if (selectedDirectory == null) return;
+
+    // 2. Find Excel files
+    final dir = Directory(selectedDirectory);
+    final excelFiles = dir
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.xlsx'))
+        .toList();
+
+    if (excelFiles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No Excel files found.")),
+      );
+      return;
+    }
+
+    // 3. Let user pick an Excel file
+    final selectedFile = await showExcelFilePicker(context, excelFiles);
+    if (selectedFile == null) return;
+
+    // 4. Read headers
+    final headers = await extractHeaders(selectedFile);
+    if (headers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No headers found in Excel.")),
+      );
+      return;
+    }
+
+    // 5. Select desired columns
+    final selectedHeaders = await showColumnSelectorDialog(context, headers);
+    if (selectedHeaders == null || selectedHeaders.isEmpty) return;
+
+    // 6. Navigate to display screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SelectedColumnsScreen(columns: selectedHeaders),
+      ),
+    );
+
+}
+// DIALOG: Pick Excel File
+Future<File?> showExcelFilePicker(BuildContext context, List<File> excelFiles) {
+  return showDialog<File>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Select an Excel File'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView(
+          shrinkWrap: true,
+          children: excelFiles.map((file) {
+            final name = file.path.split(Platform.pathSeparator).last;
+            return ListTile(
+              title: Text(name),
+              onTap: () => Navigator.pop(ctx, file),
+            );
+          }).toList(),
+        ),
+      ),
+    ),
+  );
+}
+
+// READ HEADERS FROM EXCEL
+Future<List<String>> extractHeaders(File file) async {
+  final bytes = file.readAsBytesSync();
+  final excel = Excel.decodeBytes(bytes);
+  final sheet = excel.tables.values.first;
+  if (sheet.maxRows == 0) return [];
+  return sheet.rows.first
+      .map((cell) => cell?.value.toString() ?? '')
+      .toList();
+}
+
+// DIALOG: Select Columns with Checkboxes
+Future<List<String>?> showColumnSelectorDialog(
+    BuildContext context, List<String> headers) {
+  final selected = <String>{};
+
+  return showDialog<List<String>>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Select Columns'),
+        content: SingleChildScrollView(
+          child: Column(
+            children: headers.map((header) {
+              return CheckboxListTile(
+                title: Text(header),
+                value: selected.contains(header),
+                onChanged: (checked) {
+                  setState(() {
+                    if (checked == true) {
+                      selected.add(header);
+                    } else {
+                      selected.remove(header);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, selected.toList()),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    throw UnimplementedError();
+  }
+}
+
+// DISPLAY SELECTED COLUMNS
+class SelectedColumnsScreen extends StatelessWidget {
+  final List<String> columns;
+
+  const SelectedColumnsScreen({super.key, required this.columns});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Selected Columns')),
+      body: ListView.builder(
+        itemCount: columns.length,
+        itemBuilder: (context, index) {
+          return ListTile(title: Text(columns[index]));
+        },
+      ),
+    );
+  }
+}
+
+/*
+class _PG_ScriptSettingState extends State<PG_ScriptSetting>
+{
+    final TextEditingController _productionDirectoryController = TextEditingController();
+    bool _dragging = false;
+
+    @override
+    /*
+    Widget build(BuildContext context)
+    {
+        return Scaffold
+        (
+            body: Center
+            (    
+              child: Padding
+              (
+                padding: const EdgeInsets.all(100.0),
+                child: DropTarget
+                (
+                    onDragDone: (details) async 
+                    {
+                        if (details.files.isNotEmpty) 
+                        {
+                            final droppedItem = details.files.first;
+                            final folder = Directory(droppedItem.path);
+
+                            if (await folder.exists() &&
+                            (await folder.stat()).type == FileSystemEntityType.directory) 
+                            {
+                                setState(() 
+                                {
+                                    _productionDirectoryController.text = folder.path;
+                                });
+
+                                // Navigate after a frame to avoid setState-related context issues
+                                WidgetsBinding.instance.addPostFrameCallback((_) 
+                                {
+                                    Navigator.push
+                                    (
+                                        context,
+                                        MaterialPageRoute
+                                        (
+                                            builder: (context) => PG_WavList(directoryPath: folder.path),
+                                        ),
+                                    );
+                                });
+                              }
+                          }
+                      },
+
+                      onDragEntered: (_) => setState(() => _dragging = true),
+                      onDragExited: (_) => setState(() => _dragging = false),
+                      
+                      child: Container
+                      (
+                          padding: const EdgeInsets.all(100.0),
+                          
+                          child: TextField
+                          (
+                              controller: _productionDirectoryController,
+                              style: const TextStyle(fontSize: 24),
+
+                              decoration: InputDecoration
+                              (
+                                  labelText: 'Enter Production Directory Path',
+
+                                  border: const OutlineInputBorder(),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 25, vertical: 25),
+
+                                  suffixIcon: IconButton
+                                  (
+                                      icon: const Icon(Icons.search),
+                                      onPressed: () 
+                                      {
+                                          final path = _productionDirectoryController.text;
+                                          Navigator.push
+                                          (
+                                              context,
+                                              MaterialPageRoute(builder: (context) => PG_WavList(directoryPath: path)),
+                                          );
+                                      },
+                                  ),
+                              ),
+                              
+                              onSubmitted: (value) 
+                              {
+                                  final path = _productionDirectoryController.text;
+                                  Navigator.push
+                                  (
+                                      context,
+                                      MaterialPageRoute(builder: (context) => PG_WavList(directoryPath: path)),
+                                  );
+                              },
+                          ),
+                      ),
+                )
+              ),        
+                
+            
+          ),
+        );
+        
+    }
+    */
+    
+
+    /*
+    Future<List<File>> pickDirectoryAndFindExcelFiles() async 
+    {
+        String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+        if (selectedDirectory == null) return [];
+
+        final dir = Directory(selectedDirectory);
+        return dir
+            .listSync()
+            .whereType<File>()
+            .where((file) => file.path.endsWith('.xlsx'))
+            .toList();
+    }
+
+    Future<File?> showExcelFilePicker(BuildContext context, List<File> excelFiles) async 
+    {
+        return showDialog<File>
+        (
+            context: context,
+            builder: (ctx) => AlertDialog
+            (
+                title: Text('Select the correct Script'),
+                content: SizedBox
+                (                  
+                    width: double.maxFinite,
+                    child: ListView
+                    (
+                        shrinkWrap: true,
+                        children: excelFiles.map((file) 
+                        {
+                            return ListTile
+                                (
+                                    title: Text(file.path.split('/').last),
+                                    onTap: () => Navigator.pop(ctx, file),
+                                );
+                        }).toList(),
+                    ),
+                ),
+            ),
+        );
+    }
+
+    Future<List<String>> extractColumnHeaders(File excelFile) async 
+    {
+        final bytes = excelFile.readAsBytesSync();
+        final excel = Excel.decodeBytes(bytes);
+        final firstSheet = excel.tables.values.first;
+        
+        if (firstSheet.maxRows == 0) 
+        {
+            return [];
+        }
+
+        final headers = firstSheet.rows.first;
+        return headers.map((cell) => cell?.value.toString() ?? '').toList();
+    }
+
+    Future<List<String>?> showColumnSelectorDialog(BuildContext context, List<String> headers) async 
+    {
+        final selected = <String>{};
+
+        return showDialog<List<String>>
+        (
+            context: context,
+            builder: (ctx) => StatefulBuilder
+            (
+                builder: (context, setState) => AlertDialog
+                (
+                    title: Text('Select Columns'),
+                    
+                    content: SingleChildScrollView
+                    (
+                        child: Column
+                        (
+                            children: headers.map((header) 
+                            {
+                                return CheckboxListTile
+                                (
+                                    title: Text(header),
+                                    value: selected.contains(header),
+                                    onChanged: (checked) 
+                                    {
+                                        setState(() 
+                                        {
+                                            if (checked == true) 
+                                            {
+                                                selected.add(header);
+                                            } 
+                                            else 
+                                            {
+                                                selected.remove(header);
+                                            }
+                                        });
+                                    },
+                                );
+                            }).toList(),
+                        ),
+                    ),
+
+                    actions: 
+                    [                        
+                        TextButton
+                        (
+                            onPressed: () => Navigator.pop(ctx, null),
+                            child: Text('Cancel'),
+                        ),
+                        
+                        ElevatedButton
+                        (
+                            onPressed: () => Navigator.pop(ctx, selected.toList()),
+                            child: Text('Confirm'),
+                        ),
+                    ],
+                ),
+            ),
+        );
+    }
+
+    */
+    
+    @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Excel Column Picker')),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () => _handleImport(context),
+          child: const Text('Import Excel'),
+        ),
+      ),
+    );
+  }
+}
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO: implement build
+    throw UnimplementedError();
+  }
+*/
+
+
+  
+
+  
+/*
+  class PG_ScriptView extends StatefulWidget
+  {
+      @override
+      _PG_ScriptViewState createState() => _PG_ScriptViewState();
+  }
+
+  class _PG_ScriptViewState extends State<PG_ScriptView>
+  {
+      @override
+      _
+  }*/
+
 
  class PG_DirectorySetting extends StatefulWidget 
  {
@@ -62,12 +490,7 @@ class _PG_DirectorySettingState extends State<PG_DirectorySetting >
     {
         return Scaffold
         (
-            /*
-            appBar: AppBar
-            (
-            // title: const Text('WAV File Player'),
-            ),
-            */
+            /* appBar: AppBar ( // title: const Text('WAV File Player'),), */
         body: Center(
         child: Padding(
             padding: const EdgeInsets.all(100.0),
