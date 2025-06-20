@@ -10,11 +10,8 @@ Has 'PlayAll' functionality; able to play sequential files starting at either an
 
 Implement functionality to inherit a spreadsheet (either Excel, Google Sheet or .csv) and assign English text to each file in a second column.
 
-# app_building
 
-A new Flutter project.
-
-## Flutter Help
+## Flutter Resources
 
 - [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
 - [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
