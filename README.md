@@ -1,12 +1,12 @@
 # Current Implementations:
 
-### Wav Player
+## Wav Player
 
 A simple .wav player that can receive a Filepath Directory (by text or by dragging folders from an Explorer window), populating a list of playable audio files.
 
 Has 'PlayAll' functionality; able to play sequential files starting at either an index of 0 (start of list) or currentIndex+1 (the next file from the file currently selected).
 
---- for future:
+### for future:
 
 Implement functionality to inherit a spreadsheet (either Excel, Google Sheet or .csv) and assign English text to each file in a second column.
 
