@@ -1,6 +1,6 @@
 # Current Implementations:
 
-## Wav Player
+### Wav Player
 
 A simple .wav player that can receive a Filepath Directory (by text or by dragging folders from an Explorer window), populating a list of playable audio files.
 
